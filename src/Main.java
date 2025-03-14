@@ -14,9 +14,9 @@ public class Main{
             ParseTree tree = parser.program();
 
             ParseTreeWalker walker = new ParseTreeWalker();
-            walker.walk(new MiniCPrintListener(), tree);
+            walker.walk(new MiniCPrintListener_obfuscation(), tree);
 
-            System.out.println(MiniCPrintListener.getOutput());
+            System.out.println(MiniCPrintListener_obfuscation.getOutput());
         } catch (RuntimeException e){
             System.out.println("Error");
         }
