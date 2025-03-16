@@ -19,17 +19,19 @@ int main()
         a = a + 1;
         if(a == b)
         {
-            return;
+            return 0;
         }
     }
-    return;
+    return 0;
 }
+
 int add(int x, int y)
 {
     int result;
     result = x + y;
     return result;
 }
+
 void printSum()
 {
     int sum;

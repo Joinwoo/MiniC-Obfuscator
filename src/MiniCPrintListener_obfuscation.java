@@ -3,10 +3,22 @@ import generated.MiniCParser;
 import org.antlr.v4.runtime.tree.ParseTreeListener;
 import org.antlr.v4.runtime.tree.ParseTreeProperty;
 
+import java.util.HashMap;
+
 public class MiniCPrintListener_obfuscation extends MiniCBaseListener implements ParseTreeListener{
-    int tab = 0;
     private static String output = "";
     ParseTreeProperty<String> cTree = new ParseTreeProperty<>();
+
+    private static HashMap<String, String> nameMap = new HashMap<>();
+    private static void assignObfuscatedName(String name){
+        if(name.equals("main")) return;
+        if(!(nameMap.containsKey(name)))
+            nameMap.put(name, Obfuscator.obfuscateVariableName(name));
+    }
+    private static String getObfuscatedName(String name){
+        if(name.equals("main")) return name;
+        return nameMap.get(name);
+    }
 
     public static String getOutput() {
         return output;
@@ -38,12 +50,15 @@ public class MiniCPrintListener_obfuscation extends MiniCBaseListener implements
         String IDENT = ctx.IDENT().getText();
         String result = "";
 
+        assignObfuscatedName(IDENT);
+        String obfuscatedName = getObfuscatedName(IDENT);
+
         if(ctx.getChildCount() == 3)
-            result = type_spec + " " + IDENT + ";\n";
+            result = type_spec + " " + obfuscatedName + "; ";
         else if(ctx.getChildCount() == 5)
-            result = type_spec + " " + IDENT + " = " + ctx.LITERAL().getText() + ";\n";
+            result = type_spec + " " + obfuscatedName + " = " + ctx.LITERAL().getText() + "; ";
         else
-            result = type_spec + " " + IDENT + "[" + ctx.LITERAL().getText() + "];\n";
+            result = type_spec + " " + obfuscatedName + "[" + ctx.LITERAL().getText() + "]; ";
 
         cTree.put(ctx, result);
     }
@@ -65,7 +80,10 @@ public class MiniCPrintListener_obfuscation extends MiniCBaseListener implements
         String compound_stmt = cTree.get(ctx.compound_stmt());
         String result = "";
 
-        result = type_spec + " " + IDENT + "(" + params + ")" + compound_stmt;
+        assignObfuscatedName(IDENT);
+        String obfuscatedName = getObfuscatedName(IDENT);
+
+        result = type_spec + " " + obfuscatedName + "(" + params + ")" + compound_stmt;
 
         cTree.put(ctx, result);
     }
@@ -89,7 +107,11 @@ public class MiniCPrintListener_obfuscation extends MiniCBaseListener implements
     @Override public void exitParam(MiniCParser.ParamContext ctx) {
         String type_spec = cTree.get(ctx.type_spec());
         String IDENT = ctx.IDENT().getText();
-        String result = type_spec + " " + IDENT;
+
+        assignObfuscatedName(IDENT);
+        String obfuscatedName = getObfuscatedName(IDENT);
+
+        String result = type_spec + " " + obfuscatedName;
 
         if(ctx.getChildCount() == 3)
             result += "[]";
@@ -115,7 +137,7 @@ public class MiniCPrintListener_obfuscation extends MiniCBaseListener implements
     }
 
     @Override public void exitExpr_stmt(MiniCParser.Expr_stmtContext ctx) {
-        String result = cTree.get(ctx.expr()) + ";\n";
+        String result = cTree.get(ctx.expr()) + "; ";
         cTree.put(ctx, result);
     }
 
@@ -125,18 +147,17 @@ public class MiniCPrintListener_obfuscation extends MiniCBaseListener implements
     }
 
     @Override public void enterCompound_stmt(MiniCParser.Compound_stmtContext ctx) {
-        tab++;
+
     }
     @Override public void exitCompound_stmt(MiniCParser.Compound_stmtContext ctx) {
         StringBuilder result = new StringBuilder();
 
         for(int i = 0; i < ctx.local_decl().size(); i++)
-            result.append("    ".repeat(tab) + cTree.get(ctx.local_decl(i)));
+            result.append(cTree.get(ctx.local_decl(i)));
         for(int i = 0; i < ctx.stmt().size(); i++)
-            result.append("    ".repeat(tab) + cTree.get(ctx.stmt(i)));
+            result.append(cTree.get(ctx.stmt(i)));
 
-        cTree.put(ctx, "\n" +"    ".repeat(tab - 1) +  "{\n" + result.toString() + "    ".repeat(tab-1) + "}\n");
-        tab--;
+        cTree.put(ctx, " " + "{ " + result.toString() + "} ");
     }
 
     @Override public void exitLocal_decl(MiniCParser.Local_declContext ctx) {
@@ -144,14 +165,16 @@ public class MiniCPrintListener_obfuscation extends MiniCBaseListener implements
         String IDENT = ctx.IDENT().getText();
         String result = "";
 
-        if(ctx.getChildCount() == 3)
-            result = type_spec + " " + IDENT + ";\n";
-        else if(ctx.getChildCount() == 5)
-            result = type_spec + " " + IDENT + " = " + ctx.LITERAL().getText() + ";\n";
-        else
-            result = type_spec + " " + IDENT + "[" + ctx.LITERAL().getText() + "];\n";
+        assignObfuscatedName(IDENT);
+        String obfuscatedName = getObfuscatedName(IDENT);
 
-        int numOfSilbling = ctx.getParent().getChildCount();
+        if(ctx.getChildCount() == 3)
+            result = type_spec + " " + obfuscatedName + "; ";
+        else if(ctx.getChildCount() == 5)
+            result = type_spec + " " + obfuscatedName + " = " + ctx.LITERAL().getText() + "; ";
+        else
+            result = type_spec + " " + obfuscatedName + "[" + ctx.LITERAL().getText() + "]; ";
+
 
         cTree.put(ctx, result);
     }
@@ -164,7 +187,7 @@ public class MiniCPrintListener_obfuscation extends MiniCBaseListener implements
         if(ctx.getChildCount() == 5)
             result = "if(" + expr + ")" + stmt1;
         else
-            result = "if(" + expr + ")" + stmt1 + "    ".repeat(tab) + "else" + cTree.get(ctx.stmt(1));
+            result = "if(" + expr + ")" + stmt1 + "else" + cTree.get(ctx.stmt(1));
 
         cTree.put(ctx, result);
     }
@@ -173,9 +196,9 @@ public class MiniCPrintListener_obfuscation extends MiniCBaseListener implements
         String result = "";
 
         if(ctx.getChildCount() == 2)
-            result = "return;\n";
+            result = "return; ";
         else
-            result = "return " + cTree.get(ctx.expr()) + ";\n";
+            result = "return " + cTree.get(ctx.expr()) + "; ";
 
         cTree.put(ctx, result);
     }
@@ -184,9 +207,19 @@ public class MiniCPrintListener_obfuscation extends MiniCBaseListener implements
     public void exitExpr(MiniCParser.ExprContext ctx) {
         String result = "";
         int childCount = ctx.getChildCount();
+        String obfuscatedName = "";
 
-        if(childCount == 1)
-            result = ctx.getChild(0).getText();
+        if(ctx.IDENT() != null) {
+            assignObfuscatedName(ctx.IDENT().getText());
+            obfuscatedName = getObfuscatedName(ctx.IDENT().getText());
+        }
+
+        if(childCount == 1) {
+            if(ctx.IDENT() != null)
+                result = obfuscatedName;
+            else
+                result = ctx.getChild(0).getText();
+        }
         else if(childCount == 2){
             result = ctx.getChild(0).getText() + cTree.get(ctx.expr(0));
         }
@@ -194,19 +227,19 @@ public class MiniCPrintListener_obfuscation extends MiniCBaseListener implements
             if(ctx.getChild(0).getText().equals("("))
                 result = "(" + cTree.get(ctx.expr(0)) + ")";
             else if(ctx.getChild(1).getText().equals("="))
-                result = ctx.IDENT().getText() + " = " + cTree.get(ctx.expr(0));
+                result = obfuscatedName + " = " + cTree.get(ctx.expr(0));
             else {
                 result = cTree.get(ctx.expr(0)) + " " +ctx.getChild(1).getText() + " " + cTree.get(ctx.expr(1));
             }
         }
         else if (childCount == 4) {
             if(ctx.getChild(1).getText().equals("("))
-                result = ctx.IDENT().getText() + "(" + cTree.get(ctx.args()) + ")";
+                result = obfuscatedName + "(" + cTree.get(ctx.args()) + ")";
             else
-                result = ctx.IDENT().getText() + "[" + cTree.get(ctx.expr(0)) + "]";
+                result = obfuscatedName + "[" + cTree.get(ctx.expr(0)) + "]";
         }
         else {
-            result = ctx.IDENT() + "[" + cTree.get(ctx.expr(0)) + "] = " + cTree.get(ctx.expr(1));
+            result = obfuscatedName + "[" + cTree.get(ctx.expr(0)) + "] = " + cTree.get(ctx.expr(1));
         }
 
         cTree.put(ctx, result);
