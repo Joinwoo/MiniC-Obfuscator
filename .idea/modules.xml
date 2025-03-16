@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/PrettyPrint.iml" filepath="$PROJECT_DIR$/PrettyPrint.iml" />
+      <module fileurl="file://$PROJECT_DIR$/MiniC-Obfuscator.iml" filepath="$PROJECT_DIR$/MiniC-Obfuscator.iml" />
     </modules>
   </component>
 </project>
